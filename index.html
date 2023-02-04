@@ -1,0 +1,149 @@
+<body>
+  <div id="canvas"></div>
+</body>
+
+<style>
+  body {
+    margin: 0px;
+  }
+  #canvas {
+    width: 100%;
+    height: 100%;
+    background-color: #211a10;
+  }
+  .ball {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #cb475b;
+
+    position: absolute;
+    box-shadow: inset -25px -25px 40px rgba(0,0,0,.5);
+    background-image: -webkit-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
+    background-image: -moz-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);  
+    background-image: -o-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
+    background-image: -ms-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
+  }
+
+
+
+  
+</style>
+
+<script>
+  // amt of acceleration from gravity
+  const GRAVITY_CONST = 1;
+
+  // % of velocity lost in collision with walls
+  const COLLISION_ENERGY_LOSS = 0.15;
+
+  // how many times per s we'll re-render
+  const FRAME_RATE = 100
+
+  // array of objects
+  const universe = [];
+  let canvas = {};
+
+  const basicSetup = () => {
+    canvas = {
+      ...{
+        html: document.getElementById("canvas"),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+    };
+    // universe.push({
+    //   diameter: 100,
+    //   x: 50,
+    //   y: 300,
+    //   dx: 0,
+    //   dy: 0,
+    //   id: "123",
+    //   ele: createBall(),
+    // });
+
+    for (let ob of universe) {
+      canvas.html.appendChild(ob.ele);
+    }
+
+    addClickHandler();
+  };
+
+  const addClickHandler = () => {
+    canvas.html.addEventListener("click", (e) => {
+      const newBall = createBall();
+      newBall.style.left = e.clientY-25 + "px";
+      newBall.style.top = e.clientX-25 + "px";
+      // add new ball to canvas
+      canvas.html.appendChild(newBall)
+
+      // add new ball to model
+      universe.push({
+        diameter: 100,
+        x: e.clientX-25,
+        y: e.clientY-25,
+        dx: 0,
+        dy: 0,
+        id: "123",
+        ele: newBall,
+      });
+
+      
+    });
+  };
+
+  const createBall = () => {
+    const ball = document.createElement("div");
+    ball.classList.add("ball");
+    return ball;
+  };
+
+  const start = () => {
+    basicSetup();
+    setInterval(tick, 1000/FRAME_RATE);
+  };
+
+  const tick = () => {
+    move();
+    render();
+  };
+
+  const move = () => {
+    for (let ob of universe) {
+      // apply gravity
+      ob.dy = ob.dy + GRAVITY_CONST;
+
+      // move in space
+      // if (ob.x >= canvas.height - 50) return;
+      // what is the max amount of movement we can apply?
+      const calcposition = ob.y + ob.dy;
+      const maxposition = canvas.height - 50;
+
+      ob.y = Math.min(calcposition, maxposition);
+
+      // console.log(calcposition, maxposition)
+
+      // move on to canvas
+      ob.ele.style.left = ob.x + "px";
+      ob.ele.style.top = ob.y + "px";
+
+      // edge contact and bounce
+      if (ob.y + 50 >= canvas.height) {
+        ob.dy = -ob.dy * (1 - COLLISION_ENERGY_LOSS);
+        // console.log('collision')
+      }
+
+      // console.log(ob)
+    }
+  };
+
+  const render = () => {
+    for (let ob of universe) {
+      // move on to canvas
+      ob.ele.style.left = ob.x + "px";
+      ob.ele.style.top = ob.y + "px";
+    }
+  };
+
+  start();
+</script>
