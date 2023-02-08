@@ -1,5 +1,11 @@
 <body>
   <div id="canvas"></div>
+    <div id="control"> 
+    <!-- <input type="checkbox" /> -->
+    <!-- <label>Gravity</label> -->
+    <h1 id="obs-label">Objects: </h1>
+  </div> -->
+  
 </body>
 
 <style>
@@ -11,6 +17,9 @@
     height: 100%;
     background-color: #211a10;
   }
+  h1 {
+      color: #c9ac88;
+    }
   .ball {
     width: 50px;
     height: 50px;
@@ -18,16 +27,40 @@
     background-color: #cb475b;
 
     position: absolute;
-    box-shadow: inset -25px -25px 40px rgba(0,0,0,.5);
-    background-image: -webkit-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
-    background-image: -moz-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);  
-    background-image: -o-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
-    background-image: -ms-linear-gradient(-45deg, rgba(255,255,220,.2) 0%, transparent 100%);
+    box-shadow: inset -25px -25px 40px rgba(0, 0, 0, 0.5);
+    background-image: -webkit-linear-gradient(
+      -45deg,
+      rgba(255, 255, 220, 0.2) 0%,
+      transparent 100%
+    );
+    background-image: -moz-linear-gradient(
+      -45deg,
+      rgba(255, 255, 220, 0.2) 0%,
+      transparent 100%
+    );
+    background-image: -o-linear-gradient(
+      -45deg,
+      rgba(255, 255, 220, 0.2) 0%,
+      transparent 100%
+    );
+    background-image: -ms-linear-gradient(
+      -45deg,
+      rgba(255, 255, 220, 0.2) 0%,
+      transparent 100%
+    );
+    
   }
-
-
-
-  
+  #control {
+    position: absolute;
+    margin: 10px;
+    top: 0px;
+    left: 0px;
+  }
+  .ball-label {
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 12pt;
+  }
 </style>
 
 <script>
@@ -38,11 +71,42 @@
   const COLLISION_ENERGY_LOSS = 0.15;
 
   // how many times per s we'll re-render
-  const FRAME_RATE = 100
+  const FRAME_RATE = 100;
+
+  const ELASTIC_COLLISIONS = true;
+  const GRAVITY_ENEABLED = true;
 
   // array of objects
   const universe = [];
   let canvas = {};
+
+  class Vector {
+    // m/s
+    velocity;
+    // degrees
+    direction;
+
+    constructor(m, d) {
+      m ? this.velocity = m : this.velocity = 0;
+      d ? this.direction = d : this.direction = 0;
+    }
+  }
+
+  class Ball {
+    xPos;
+    yPos;
+    mass;
+    vector;
+    htmlElement;
+
+    constructor(x, y, m, v, e) {
+      this.xPos = x;
+      this.yPos = y;
+      this.mass = m;
+      this.vector = v;
+      this.htmlElement = e;
+    }
+  }
 
   const basicSetup = () => {
     canvas = {
@@ -52,55 +116,46 @@
         height: window.innerHeight,
       },
     };
-    // universe.push({
-    //   diameter: 100,
-    //   x: 50,
-    //   y: 300,
-    //   dx: 0,
-    //   dy: 0,
-    //   id: "123",
-    //   ele: createBall(),
-    // });
 
     for (let ob of universe) {
       canvas.html.appendChild(ob.ele);
     }
 
-    addClickHandler();
+    clickHandler();
   };
 
-  const addClickHandler = () => {
+  const clickHandler = () => {
     canvas.html.addEventListener("click", (e) => {
-      const newBall = createBall();
-      newBall.style.left = e.clientY-25 + "px";
-      newBall.style.top = e.clientX-25 + "px";
+      const newHtmlElement = createBallHtmlElement();
+      newHtmlElement.style.left = e.clientX - 25 + "px";
+      newHtmlElement.style.top = e.clientY - 25 + "px";
       // add new ball to canvas
-      canvas.html.appendChild(newBall)
+      canvas.html.appendChild(newHtmlElement);
 
-      // add new ball to model
-      universe.push({
-        diameter: 100,
-        x: e.clientX-25,
-        y: e.clientY-25,
-        dx: 0,
-        dy: 0,
-        id: "123",
-        ele: newBall,
-      });
-
-      
+      const newBallObject = new Ball(
+        e.clientX - 25,
+        e.clientY - 25,
+        100,
+        new Vector(Math.random()*400, (2*Math.PI)*Math.random()),
+        newHtmlElement
+      );
+      universe.push(newBallObject);
     });
   };
 
-  const createBall = () => {
+  const createBallHtmlElement = () => {
     const ball = document.createElement("div");
     ball.classList.add("ball");
+    const label = document.createElement('p');
+    label.innerText = '';
+    ball.appendChild(label)
+    label.classList.add('ball-label')
     return ball;
   };
 
   const start = () => {
     basicSetup();
-    setInterval(tick, 1000/FRAME_RATE);
+    setInterval(tick, 1000 / FRAME_RATE);
   };
 
   const tick = () => {
@@ -109,40 +164,53 @@
   };
 
   const move = () => {
-    for (let ob of universe) {
-      // apply gravity
-      ob.dy = ob.dy + GRAVITY_CONST;
+    const seconds = 1/FRAME_RATE
+    for (let object of universe) {
+      const distance = object.vector.velocity * seconds
+      let x2 = object.xPos + distance * Math.cos(object.vector.direction)
+      let y2 = object.yPos + distance * Math.sin(object.vector.direction)
 
-      // move in space
-      // if (ob.x >= canvas.height - 50) return;
-      // what is the max amount of movement we can apply?
-      const calcposition = ob.y + ob.dy;
-      const maxposition = canvas.height - 50;
+      // right vertical edge contact
+      const rightEdge = x2 >= (canvas.width - 50);
+      // console.log(canvas.width, x2)
+      const leftEdge  = x2 <= 0
+      const top = y2 <= 0;
+      const bottomn = y2 >= canvas.height - 50
 
-      ob.y = Math.min(calcposition, maxposition);
 
-      // console.log(calcposition, maxposition)
-
-      // move on to canvas
-      ob.ele.style.left = ob.x + "px";
-      ob.ele.style.top = ob.y + "px";
-
-      // edge contact and bounce
-      if (ob.y + 50 >= canvas.height) {
-        ob.dy = -ob.dy * (1 - COLLISION_ENERGY_LOSS);
-        // console.log('collision')
+      if (rightEdge || leftEdge) {
+        const piDiff = Math.PI - object.vector.direction
+        object.vector.direction =  piDiff 
+      } 
+      
+      if ( top || bottomn) {
+        const piDiff = Math.PI - object.vector.direction
+        object.vector.direction =  piDiff + Math.PI
       }
 
-      // console.log(ob)
+      // assign new position to object
+      object.xPos = x2;
+      object.yPos = y2;
+
+
+
+
+
+      // if (GRAVITY_ENEABLED) {
+      //   ob.dy = ob.dy + GRAVITY_CONST;
+      // }
+
     }
   };
 
   const render = () => {
     for (let ob of universe) {
-      // move on to canvas
-      ob.ele.style.left = ob.x + "px";
-      ob.ele.style.top = ob.y + "px";
+      ob.htmlElement.style.left = ob.xPos + "px";
+      ob.htmlElement.style.top = ob.yPos + "px";
+      ob.htmlElement.firstChild.innerText = ob.vector.direction.toFixed(2)
     }
+
+    document.getElementById('obs-label').innerText = `Objects: ${universe.length}`;
   };
 
   start();
