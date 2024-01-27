@@ -1,10 +1,15 @@
 <body>
   <div id="canvas"></div>
     <div id="control"> 
-    <!-- <input type="checkbox" /> -->
-    <!-- <label>Gravity</label> -->
     <h1 id="obs-label">Objects: </h1>
-  </div> -->
+    <p id="fpsLabel">FPS: </p>
+
+    <label>
+      <input type="checkbox" id="gravityToggle" checked>
+      Gravity
+    </label>
+  </div>
+  </div> 
   
 </body>
 
@@ -17,39 +22,24 @@
     height: 100%;
     background-color: #211a10;
   }
-  h1 {
+  h1, label, p {
       color: #c9ac88;
     }
   .ball {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background-color: #cb475b;
+  width: var(--ball-diameter);
+  height: var(--ball-diameter);
+  border-radius: 50%;
+  background-color: #cb475b;
+  position: absolute;
 
-    position: absolute;
-    box-shadow: inset -25px -25px 40px rgba(0, 0, 0, 0.5);
-    background-image: -webkit-linear-gradient(
-      -45deg,
-      rgba(255, 255, 220, 0.2) 0%,
-      transparent 100%
-    );
-    background-image: -moz-linear-gradient(
-      -45deg,
-      rgba(255, 255, 220, 0.2) 0%,
-      transparent 100%
-    );
-    background-image: -o-linear-gradient(
-      -45deg,
-      rgba(255, 255, 220, 0.2) 0%,
-      transparent 100%
-    );
-    background-image: -ms-linear-gradient(
-      -45deg,
-      rgba(255, 255, 220, 0.2) 0%,
-      transparent 100%
-    );
-    
-  }
+  /* Simplified Box Shadow */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+
+  /* Linear Gradient for Light Effect */
+  background-image: linear-gradient(to bottom left, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.2));
+}
+
+
   #control {
     position: absolute;
     margin: 10px;
@@ -74,7 +64,15 @@
   const FRAME_RATE = 100;
 
   const ELASTIC_COLLISIONS = true;
-  const GRAVITY_ENEABLED = true;
+  let gravityEnabled = true; // Initially set to true
+
+  const BALL_DIAMETER = 4; // Half the original size, which was 50
+  const BALL_RADIUS = BALL_DIAMETER / 2;
+
+  let lastFrameTime = Date.now();
+  let frameCount = 0;
+  let fps = 0;
+
 
   // array of objects
   const universe = [];
@@ -107,6 +105,19 @@
       this.htmlElement = e;
     }
   }
+  const GRID_SIZE = 100; // Adjust this based on the canvas size and ball size
+  let grid = [];
+
+  function setupGrid() {
+    grid = [];
+    for (let i = 0; i < Math.ceil(canvas.width / GRID_SIZE); i++) {
+      grid[i] = [];
+      for (let j = 0; j < Math.ceil(canvas.height / GRID_SIZE); j++) {
+        grid[i][j] = [];
+      }
+    }
+  }
+
 
   const basicSetup = () => {
     canvas = {
@@ -116,32 +127,49 @@
         height: window.innerHeight,
       },
     };
+    document.documentElement.style.setProperty('--ball-diameter', `${BALL_DIAMETER}px`);
+
 
     for (let ob of universe) {
       canvas.html.appendChild(ob.ele);
     }
 
     clickHandler();
+    document.getElementById('gravityToggle').addEventListener('change', (event) => {
+      gravityEnabled = event.target.checked;
+    });
+
+    // Resize event listener
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      // You may also want to reposition or adjust elements within the canvas here
+    });
   };
 
   const clickHandler = () => {
     canvas.html.addEventListener("click", (e) => {
-      const newHtmlElement = createBallHtmlElement();
-      newHtmlElement.style.left = e.clientX - 25 + "px";
-      newHtmlElement.style.top = e.clientY - 25 + "px";
-      // add new ball to canvas
-      canvas.html.appendChild(newHtmlElement);
+        for (let i = 0; i < 50; i++) {
+            const angle = (i / 50) * Math.PI * 2; // Divide the circle into 50 parts
+            const radius = 100; // Radius of the circle of balls
+            const x = e.clientX + radius * Math.cos(angle) - BALL_RADIUS;
+            const y = e.clientY + radius * Math.sin(angle) - BALL_RADIUS;
 
-      const newBallObject = new Ball(
-        e.clientX - 25,
-        e.clientY - 25,
-        100,
-        new Vector(Math.random()*400, (2*Math.PI)*Math.random()),
-        newHtmlElement
-      );
-      universe.push(newBallObject);
+            const newHtmlElement = createBallHtmlElement();
+            newHtmlElement.style.left = x + "px";
+            newHtmlElement.style.top = y + "px";
+
+            // Add new ball to canvas
+            canvas.html.appendChild(newHtmlElement);
+
+            const newBallObject = new Ball(
+                x, y, 100, new Vector(0, 0), newHtmlElement
+            );
+            universe.push(newBallObject);
+        }
     });
-  };
+};
+
+
 
   const createBallHtmlElement = () => {
     const ball = document.createElement("div");
@@ -155,59 +183,182 @@
 
   const start = () => {
     basicSetup();
+    setupGrid()
     setInterval(tick, 1000 / FRAME_RATE);
   };
 
   const tick = () => {
     move();
     render();
+     frameCount++;
+
+    const now = Date.now();
+    const delta = now - lastFrameTime;
+
+    if (delta >= 1000) { // Update FPS every second
+        fps = frameCount;
+        frameCount = 0;
+        lastFrameTime = now;
+        document.getElementById('fpsLabel').innerText = 'FPS: ' + fps;
+    }
   };
 
-  const move = () => {
-    const seconds = 1/FRAME_RATE
+  function applyGravity(ball, gravitationalConstant, timeStep) {
+      // The velocity in X remains the same, as gravity only affects the Y component
+      const velocityX = ball.vector.velocity * Math.cos(ball.vector.direction);
+
+      // Gravity affects the velocity in Y. It should always pull down, hence adding the force.
+      // Assuming downwards is the positive direction in Y-axis.
+      const velocityY = ball.vector.velocity * Math.sin(ball.vector.direction) + gravitationalConstant * timeStep;
+
+      // Update the ball's velocity vector with the new values
+      ball.vector = new Vector(Math.sqrt(velocityX ** 2 + velocityY ** 2), Math.atan2(velocityY, velocityX));
+  }
+
+  function detectCollision(ball1, ball2) {
+    const dx = ball1.xPos - ball2.xPos;
+    const dy = ball1.yPos - ball2.yPos;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    return distance < BALL_DIAMETER; // Instead of 50
+
+  }
+
+function handleCollision(ball1, ball2) {
+    // Calculate the difference in position
+    const dx = ball2.xPos - ball1.xPos;
+    const dy = ball2.yPos - ball1.yPos;
+
+    // Calculate the distance between balls
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Normal vector
+    const nx = dx / distance;
+    const ny = dy / distance;
+
+    // Tangential vector
+    const tx = -ny;
+    const ty = nx;
+
+    // Dot product tangent direction
+    const dpTan1 = ball1.vector.velocity * Math.cos(ball1.vector.direction) * tx + ball1.vector.velocity * Math.sin(ball1.vector.direction) * ty;
+    const dpTan2 = ball2.vector.velocity * Math.cos(ball2.vector.direction) * tx + ball2.vector.velocity * Math.sin(ball2.vector.direction) * ty;
+
+    // Dot product normal direction
+    const dpNorm1 = ball1.vector.velocity * Math.cos(ball1.vector.direction) * nx + ball1.vector.velocity * Math.sin(ball1.vector.direction) * ny;
+    const dpNorm2 = ball2.vector.velocity * Math.cos(ball2.vector.direction) * nx + ball2.vector.velocity * Math.sin(ball2.vector.direction) * ny;
+
+    // Conservation of momentum in 1D
+    const m1 = (dpNorm1 * (ball1.mass - ball2.mass) + 2 * ball2.mass * dpNorm2) / (ball1.mass + ball2.mass);
+    const m2 = (dpNorm2 * (ball2.mass - ball1.mass) + 2 * ball1.mass * dpNorm1) / (ball1.mass + ball2.mass);
+
+    // Update ball velocities
+    ball1.vector.velocity = Math.sqrt(m1 * m1 + dpTan1 * dpTan1);
+    ball1.vector.direction = Math.atan2(m1 * ny + dpTan1 * ty, m1 * nx + dpTan1 * tx);
+
+    ball2.vector.velocity = Math.sqrt(m2 * m2 + dpTan2 * dpTan2);
+    ball2.vector.direction = Math.atan2(m2 * ny + dpTan2 * ty, m2 * nx + dpTan2 * tx);
+
+    // Separate the balls slightly to avoid sticking
+
+    if (distance < BALL_DIAMETER) {
+        const overlap = 0.5 * (BALL_DIAMETER - distance);
+        const nx = (ball2.xPos - ball1.xPos) / distance;
+        const ny = (ball2.yPos - ball1.yPos) / distance;
+
+        ball1.xPos -= overlap * nx;
+        ball1.yPos -= overlap * ny;
+        ball2.xPos += overlap * nx;
+        ball2.yPos += overlap * ny;
+    }
+}
+
+const resizeCanvas = () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+};
+
+
+
+  function rotateVelocity(vector, angle) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const velocityX = vector.velocity * Math.cos(vector.direction);
+      const velocityY = vector.velocity * Math.sin(vector.direction);
+
+      return new Vector(
+          velocityX * cos - velocityY * sin,
+          velocityX * sin + velocityY * cos
+      );
+  }
+
+const move = () => {
+    setupGrid();
+    const seconds = 1 / FRAME_RATE;
+
     for (let object of universe) {
-      const distance = object.vector.velocity * seconds
-      let x2 = object.xPos + distance * Math.cos(object.vector.direction)
-      let y2 = object.yPos + distance * Math.sin(object.vector.direction)
-
-      // right vertical edge contact
-      const rightEdge = x2 >= (canvas.width - 50);
-      // console.log(canvas.width, x2)
-      const leftEdge  = x2 <= 0
-      const top = y2 <= 0;
-      const bottomn = y2 >= canvas.height - 50
-
-
-      if (rightEdge || leftEdge) {
-        const piDiff = Math.PI - object.vector.direction
-        object.vector.direction =  piDiff 
-      } 
-      
-      if ( top || bottomn) {
-        const piDiff = Math.PI - object.vector.direction
-        object.vector.direction =  piDiff + Math.PI
+      if (gravityEnabled) {
+        const gravitationalConstant = 900.81; // m/s^2
+        applyGravity(object, gravitationalConstant, seconds);
       }
 
-      // assign new position to object
+      const distance = object.vector.velocity * seconds;
+      let x2 = object.xPos + distance * Math.cos(object.vector.direction);
+      let y2 = object.yPos + distance * Math.sin(object.vector.direction);
+
+      // Check for wall collisions
+      const rightEdge = x2 >= (canvas.width - BALL_DIAMETER);
+      const leftEdge = x2 <= 0;
+      const topEdge = y2 <= 0;
+      const bottomEdge = y2 >= (canvas.height - BALL_DIAMETER);
+
+      if (rightEdge || leftEdge) {
+        object.vector.velocity *= (1 - COLLISION_ENERGY_LOSS); // Reduce velocity
+        object.vector.direction = Math.PI - object.vector.direction;
+        // Adjust ball position to stay within canvas
+        x2 = rightEdge ? canvas.width - BALL_DIAMETER : (leftEdge ? 0 : x2);
+      }
+
+      if (topEdge || bottomEdge) {
+        object.vector.velocity *= (1 - COLLISION_ENERGY_LOSS); // Reduce velocity
+        object.vector.direction = -object.vector.direction;
+        // Adjust ball position to stay within canvas
+        y2 = bottomEdge ? canvas.height - BALL_DIAMETER : (topEdge ? 0 : y2);
+      }
+
+      // Assign new position to object
       object.xPos = x2;
       object.yPos = y2;
 
 
+      // Place balls in grid
 
+      let gridX = Math.floor(object.xPos / GRID_SIZE);
+      let gridY = Math.floor(object.yPos / GRID_SIZE);
+      grid[gridX][gridY].push(object);
+      
 
-
-      // if (GRAVITY_ENEABLED) {
-      //   ob.dy = ob.dy + GRAVITY_CONST;
-      // }
-
+      // Check collisions in grid
+      for (let i = 0; i < grid.length; i++) {
+        for (let j = 0; j < grid[i].length; j++) {
+          let cell = grid[i][j];
+          for (let k = 0; k < cell.length; k++) {
+            for (let l = k + 1; l < cell.length; l++) {
+              if (detectCollision(cell[k], cell[l])) {
+                handleCollision(cell[k], cell[l]);
+              }
+            }
+          }
+        }
+      }
     }
-  };
+  }
 
   const render = () => {
     for (let ob of universe) {
       ob.htmlElement.style.left = ob.xPos + "px";
       ob.htmlElement.style.top = ob.yPos + "px";
-      ob.htmlElement.firstChild.innerText = ob.vector.direction.toFixed(2)
+      // ob.htmlElement.firstChild.innerText = ob.vector.direction.toFixed(2) + ' ' + ob.vector.velocity.toFixed(2)
     }
 
     document.getElementById('obs-label').innerText = `Objects: ${universe.length}`;
