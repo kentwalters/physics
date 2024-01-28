@@ -1,73 +1,109 @@
 * {
-    font-family: monospace;
+  font-family: monospace;
 }
 
 body {
-    background-color: #d4f0f2;
+  background-color: #d4f0f2;
 }
 
 a {
-    color: #fc4538;
-    font-weight: bold;
-    text-decoration: none;
+  color: #fc4538;
+  font-weight: bold;
+  text-decoration: none;
 }
 
 #name {
-    position: absolute;
-    top: 18px;
-    left: 36px;
+  position: absolute;
+  top: 18px;
+  left: 36px;
 }
 
-
 body {
-    margin: 0px;
+  margin: 0px;
 }
 
 #canvas {
-    width: 100%;
-    height: 100%;
-    background-color: #211a10;
+  width: 100%;
+  height: 100%;
+  background-color: #211a10;
 }
 
 p {
-    margin-top: 2px;
-    margin-bottom: 2px;
+  margin-top: 2px;
+  margin-bottom: 2px;
 }
 
-h1, h3, label, p {
+h1,
+h3,
+label,
+p {
   color: #c9ac88;
 }
 
 input {
-    margin-left: 0px !important;
-}
-
-.ball {
-  width: var(--ball-diameter);
-  height: var(--ball-diameter);
-  border-radius: 50%;
-  background-color: #cb475b;
-  position: absolute;
-
-  /* Simplified Box Shadow */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
-
-  /* Linear Gradient for Light Effect */
-  background-image: linear-gradient(to bottom left, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.2));
+  margin-left: 0px !important;
 }
 
 h3 {
-    margin-bottom: 4px;
-    margin-top: 0px;
-    
+  margin-bottom: 4px;
+  margin-top: 0px;
 }
 
 #control {
-    position: absolute;
-    margin: 18px;
-    padding:18px;
-    bottom: 0px;
-    right: 0px;
-    background-color: #212410;
+  position: absolute;
+  margin: 18px;
+  padding: 18px;
+  bottom: 0px;
+  right: 0px;
+  background-color: rgba(33, 36, 16, 0.5);
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    width: 240px;
+
 }
 
+#control label, #control input[type='range'] {
+    margin-bottom: 4px; /* Add some space between each control */
+  }
+
+  /* Existing styles */
+/* ... */
+
+/* Slider thumb (for webkit browsers) */
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: #cb475b;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  
+  /* Slider thumb (for mozilla browsers) */
+  input[type='range']::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: #cb475b;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  
+  /* Slider track */
+  input[type='range']::-webkit-slider-runnable-track,
+  input[type='range']::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: #cb475b;
+    cursor: pointer;
+  }
+  
+  /* Checkbox checked style */
+  input[type='checkbox']:checked {
+    background-color: #cb475b;
+    border-color: #cb475b;
+  }
+  
+  /* You might need to add custom styles for checkbox for different browsers 
+     since default checkbox styling is limited in CSS */
+  

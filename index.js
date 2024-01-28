@@ -1,10 +1,8 @@
-const COLLISION_ENERGY_LOSS = 0.15;
+let COLLISION_ENERGY_LOSS = 0.12;
 const FRAME_RATE = 100;
-const ELASTIC_COLLISIONS = true;
-const BALL_DIAMETER = 4; 
-const BALL_RADIUS = BALL_DIAMETER / 2;
-const GRID_SIZE = 100; 
-let gravityEnabled = true; 
+
+const GRID_SIZE = 50;
+let gravityEnabled = true;
 let collisionsEnabled = true;
 let lastFrameTime = Date.now();
 let frameCount = 0;
@@ -12,6 +10,8 @@ let fps = 0;
 let canvas, ctx;
 let grid = [];
 const universe = [];
+let BALL_DIAMETER = 4;
+let BALL_RADIUS = BALL_DIAMETER / 2;
 
 class Vector {
   velocity;
@@ -47,19 +47,19 @@ const setupGrid = () => {
       grid[i][j] = [];
     }
   }
-}
+};
 
 const basicSetup = () => {
   canvas = document.getElementById("canvas");
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   ctx = canvas.getContext("2d");
-  
+
   document.documentElement.style.setProperty(
     "--ball-diameter",
-    `${BALL_DIAMETER}px`,
+    `${BALL_DIAMETER}px`
   );
-  
+
   addClickHandler();
 
   document
@@ -74,25 +74,74 @@ const basicSetup = () => {
       collisionsEnabled = event.target.checked;
     });
 
+    // Add event listener for the collision energy loss slider
+    document.getElementById("collisionEnergyLossSlider").addEventListener("input", (event) => {
+        COLLISION_ENERGY_LOSS = parseFloat(event.target.value);
+    });
+
+    // In your basicSetup function or similar initialization function
+    document.getElementById("collisionEnergyLossSlider").addEventListener("input", (event) => {
+        const value = parseFloat(event.target.value);
+        COLLISION_ENERGY_LOSS = value;
+        
+        // Update the span element with the current value
+        document.getElementById("collisionEnergyLossValue").textContent = (value*100).toFixed(0) + '%';
+    });
+  
+  // Also set initial value on page load
+  document.getElementById("collisionEnergyLossValue").textContent = (document.getElementById("collisionEnergyLossSlider").value*100).toFixed(0) + '%'
+  
+  // Add event listener for the ball diameter slider
+  document.getElementById("ballDiameterSlider").addEventListener("input", (event) => {
+    const newDiameter = parseInt(event.target.value);
+    BALL_DIAMETER = newDiameter;
+    BALL_RADIUS = newDiameter / 2;
+
+    // Update the span element with the current diameter
+    document.getElementById("ballDiameterValue").textContent = newDiameter + 'px';
+
+    // Optionally: Update all existing balls to new diameter
+    for (let ball of universe) {
+      // Update ball diameter and radius here
+      ball.htmlElement.style.width = `${newDiameter}px`;
+      ball.htmlElement.style.height = `${newDiameter}px`;
+    }
+  });
+  document.getElementById("ballDiameterValue").textContent = document.getElementById("ballDiameterSlider").value + 'px';
+
+
   window.addEventListener("resize", resizeCanvas);
 };
 
 const addClickHandler = () => {
-  canvas.addEventListener("click", (e) => {
-    const NUM_BALLS = 100; // Number of balls to create
-    const RADIUS = 200; // Radius of the circle of balls
+    canvas.addEventListener("click", (e) => {
+        const NUM_POINTS = 5; // 5 points for the star
+        const NUM_BALLS_PER_LINE = 20; // Number of balls to place along each line
+        const STAR_RADIUS = 100; // Radius of the star
 
-    for (let i = 0; i < NUM_BALLS; i++) {
-      const angle = (i / NUM_BALLS) * Math.PI * 2; // Divide the circle into 100 parts
-      const x = e.clientX + RADIUS * Math.cos(angle) - BALL_RADIUS;
-      const y = e.clientY + RADIUS * Math.sin(angle) - BALL_RADIUS;
+        let starPoints = [];
+        for (let i = 0; i < NUM_POINTS; i++) {
+            const angle = (i / NUM_POINTS) * Math.PI * 2 - Math.PI / 2; // Start from the top point
+            const x = e.clientX + STAR_RADIUS * Math.cos(angle);
+            const y = e.clientY + STAR_RADIUS * Math.sin(angle);
+            starPoints.push({ x, y });
+        }
 
-      // Create a new Ball object
-      const newBallObject = new Ball(x, y, 100, new Vector(0, 0));
-      universe.push(newBallObject);
-    }
-  });
+        for (let i = 0; i < starPoints.length; i++) {
+            const start = starPoints[i];
+            const end = starPoints[(i + 2) % NUM_POINTS]; // Skip one point to form the star shape
+            for (let j = 0; j < NUM_BALLS_PER_LINE; j++) {
+                const x = start.x + (end.x - start.x) * j / NUM_BALLS_PER_LINE;
+                const y = start.y + (end.y - start.y) * j / NUM_BALLS_PER_LINE;
+
+                const newBallObject = new Ball(x, y, 100, new Vector(0, 0));
+                universe.push(newBallObject);
+            }
+        }
+    });
 };
+
+  
 
 const tick = () => {
   move();
@@ -124,17 +173,17 @@ const applyGravity = (ball, gravitationalConstant, timeStep) => {
   // Update the ball's velocity vector with the new values
   ball.vector = new Vector(
     Math.sqrt(velocityX ** 2 + velocityY ** 2),
-    Math.atan2(velocityY, velocityX),
+    Math.atan2(velocityY, velocityX)
   );
-}
+};
 
 const detectCollision = (ball1, ball2) => {
   const dx = ball1.xPos - ball2.xPos;
   const dy = ball1.yPos - ball2.yPos;
   const distance = Math.sqrt(dx * dx + dy * dy);
 
-  return distance < BALL_DIAMETER; 
-}
+  return distance < BALL_DIAMETER;
+};
 
 const handleCollision = (ball1, ball2) => {
   // Calculate the difference in position
@@ -180,13 +229,13 @@ const handleCollision = (ball1, ball2) => {
   ball1.vector.velocity = Math.sqrt(m1 * m1 + dpTan1 * dpTan1);
   ball1.vector.direction = Math.atan2(
     m1 * ny + dpTan1 * ty,
-    m1 * nx + dpTan1 * tx,
+    m1 * nx + dpTan1 * tx
   );
 
   ball2.vector.velocity = Math.sqrt(m2 * m2 + dpTan2 * dpTan2);
   ball2.vector.direction = Math.atan2(
     m2 * ny + dpTan2 * ty,
-    m2 * nx + dpTan2 * tx,
+    m2 * nx + dpTan2 * tx
   );
 
   // Separate the balls slightly to avoid sticking
@@ -201,7 +250,7 @@ const handleCollision = (ball1, ball2) => {
     ball2.xPos += overlap * nx;
     ball2.yPos += overlap * ny;
   }
-}
+};
 
 const resizeCanvas = () => {
   canvas.width = window.innerWidth;
@@ -264,7 +313,7 @@ const move = () => {
             }
           }
         }
-      }  
+      }
     }
   }
 };
@@ -278,15 +327,16 @@ const render = () => {
       ob.yPos + BALL_RADIUS,
       BALL_RADIUS,
       0,
-      Math.PI * 2,
+      Math.PI * 2
     );
     ctx.fillStyle = "#cb475b"; // Ball color
     ctx.fill();
     ctx.closePath();
   }
 
-  document.getElementById("obs-label").innerText =
-    `Objects: ${universe.length}`;
+  document.getElementById(
+    "obs-label"
+  ).innerText = `Objects: ${universe.length}`;
 };
 
 const start = () => {
