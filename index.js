@@ -112,34 +112,22 @@ const basicSetup = () => {
 
   window.addEventListener("resize", resizeCanvas);
 };
-
 const addClickHandler = () => {
     canvas.addEventListener("click", (e) => {
-        const NUM_POINTS = 5; // 5 points for the star
-        const NUM_BALLS_PER_LINE = 20; // Number of balls to place along each line
-        const STAR_RADIUS = 100; // Radius of the star
+        const NUM_BALLS = 30; // Total number of balls in the circle
+        const CIRCLE_RADIUS = 100; // Radius of the circle
 
-        let starPoints = [];
-        for (let i = 0; i < NUM_POINTS; i++) {
-            const angle = (i / NUM_POINTS) * Math.PI * 2 - Math.PI / 2; // Start from the top point
-            const x = e.clientX + STAR_RADIUS * Math.cos(angle);
-            const y = e.clientY + STAR_RADIUS * Math.sin(angle);
-            starPoints.push({ x, y });
-        }
+        for (let i = 0; i < NUM_BALLS; i++) {
+            const angle = (i / NUM_BALLS) * Math.PI * 2; // Angle for each ball
+            const x = e.clientX + CIRCLE_RADIUS * Math.cos(angle) - BALL_RADIUS;
+            const y = e.clientY + CIRCLE_RADIUS * Math.sin(angle) - BALL_RADIUS;
 
-        for (let i = 0; i < starPoints.length; i++) {
-            const start = starPoints[i];
-            const end = starPoints[(i + 2) % NUM_POINTS]; // Skip one point to form the star shape
-            for (let j = 0; j < NUM_BALLS_PER_LINE; j++) {
-                const x = start.x + (end.x - start.x) * j / NUM_BALLS_PER_LINE;
-                const y = start.y + (end.y - start.y) * j / NUM_BALLS_PER_LINE;
-
-                const newBallObject = new Ball(x, y, 100, new Vector(0, 0));
-                universe.push(newBallObject);
-            }
+            const newBallObject = new Ball(x, y, 100, new Vector(0, 0));
+            universe.push(newBallObject);
         }
     });
 };
+
 
   
 
