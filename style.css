@@ -1,0 +1,73 @@
+* {
+    font-family: monospace;
+}
+
+body {
+    background-color: #d4f0f2;
+}
+
+a {
+    color: #fc4538;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+#name {
+    position: absolute;
+    top: 18px;
+    left: 36px;
+}
+
+
+body {
+    margin: 0px;
+}
+
+#canvas {
+    width: 100%;
+    height: 100%;
+    background-color: #211a10;
+}
+
+p {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+h1, h3, label, p {
+  color: #c9ac88;
+}
+
+input {
+    margin-left: 0px !important;
+}
+
+.ball {
+  width: var(--ball-diameter);
+  height: var(--ball-diameter);
+  border-radius: 50%;
+  background-color: #cb475b;
+  position: absolute;
+
+  /* Simplified Box Shadow */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+
+  /* Linear Gradient for Light Effect */
+  background-image: linear-gradient(to bottom left, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.2));
+}
+
+h3 {
+    margin-bottom: 4px;
+    margin-top: 0px;
+    
+}
+
+#control {
+    position: absolute;
+    margin: 18px;
+    padding:18px;
+    bottom: 0px;
+    right: 0px;
+    background-color: #212410;
+}
+
